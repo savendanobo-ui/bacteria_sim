@@ -62,8 +62,8 @@ Puede alterar los diferentes argumentos, use
   ```
 
 Limitaciones conocidas:
-El sustrato se difunde aleatoriamente (sin gradientes de concenración macroscópicos ni quimiotaxis)
-El modulo de calibración de parametros aun esta en desarrollo
-La visualización puede volverse lenta para grids de mas de 200x200
+- El sustrato se difunde aleatoriamente (sin gradientes de concenración macroscópicos ni quimiotaxis)
+- El modulo de calibración de parametros aun esta en desarrollo
+- La visualización puede volverse lenta para grids de mas de 200x200
 
 Distribuido bajo licencia MIT. Consulta el archivo LICENSE para mas información.
