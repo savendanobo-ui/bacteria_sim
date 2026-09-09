@@ -1,26 +1,29 @@
-# Python
+# Bytecode y archivos compilados
 __pycache__/
 *.py[cod]
 *.so
 .Python
+
+# Entornos virtuales 
+.venv/
 venv/
 env/
 ENV/
 
-# Entornos y editores
+# Archivos de editor
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Datos y outputs generados
+# Archivos de datos y outputs
 output_simulacion/*.png
 data/*.npy
 data/*.csv
 runs/*.mp4
 runs/*.gif
 
-# Archivos de pruebas y cobertura
+# Archivos de pruebas
 .pytest_cache/
 .coverage
 htmlcov/

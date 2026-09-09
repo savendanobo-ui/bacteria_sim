@@ -1,0 +1,24 @@
+[project]
+name = "bacteria_sim"
+version = "0.1.0"
+description = "Simulación del crecimiento de E. coli mediante autómatas celulares"
+readme = "README.md"
+authors = [
+    { name = "savendanobo-ui", email = "savendanobo@unal.edu.co" }
+]
+license = {text = "MIT"}
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=1.24",
+    "matplotlib>=3.7",
+    "pandas>=2.0",
+    "seaborn>=0.12",
+    "scipy>=1.10",
+]
+
+[project.scripts]
+microgravity-bacteria-sim = "microgravity_bacteria_sim:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

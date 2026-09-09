@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 from pathlib import Path
-from src.model import BacteriaCellularAutomaton
-from src.visualization import BacteriaVisualization
+from bacteria_sim.model import BacteriaCellularAutomaton
+from bacteria_sim.visualization import BacteriaVisualization
 
 def main():
     parser = argparse.ArgumentParser(description="Simulación de crecimiento bacteriano en microgravedad")

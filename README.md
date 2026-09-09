@@ -1,21 +1,16 @@
-# Simulación de crecimiento bacteriano en microgravedad
+# Simulación de crecimiento bacteriano de E. coli K-12 MG1655 en condiciones estándar 
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Descripción
 
-Este proyecto implementa un **autómata celular bidimensional** para simular el crecimiento de bacterias (ej. *Bacillus cereus* y *Escherichia coli*) bajo dos condiciones gravitacionales:
-
-- **Gravedad normal** (1 g)
-- **Microgravedad** (simulada)
-
-El modelo está basado en el seminario *Microgravedad y Radiación Espacial: Su Impacto en la Biología Cuántica de las Bacterias* (Avendaño, 2025) y reproduce cualitativamente los efectos observados en experimentos de la ISS: mayor tasa de división, formación de biopelículas y tolerancia a la aglomeración celular en microgravedad.
+Este proyecto implementa un **autómata celular bidimensional** para simular el crecimiento de E. coli en condiciones estándar (37°C, medio LB, pH = 7,0).
 
 ## Base científica
 
-- **Microgravedad** → aumenta la probabilidad de división (`P_div`), reduce la inhibición espacial (`N0`) y favorece la agregación (`P_cluster`).
-- **Sustrato** → difusión browniana y consumo local por células en crecimiento.
+- **Modelo estocástico basado en la literatura científica** → La probabilidad de crecimiento (`P_grow`) y probabilidad de división (`P_div`) controlan la fase de lag y de crecimiento; para controlar la fase estacionaria se usa la variable (`N0`) que representa la inhibición espacial.
+- **Sustrato y gradientes de concentración** → difusión browniana y consumo local por células en crecimiento. Gracias al consumo local de nutrientes de las bacterias se genera un gradiente de concentración natural.
 - **Reglas celulares**:
   - `0` = vacío
   - `1` = célula en división
@@ -25,33 +20,30 @@ El modelo está basado en el seminario *Microgravedad y Radiación Espacial: Su 
 ## Instalación
 
 ### Requisitos
-
-- Python 3.12 o superior, en caso de presentar conflictos de versiones intente usar la version 3.12 de python
-- pip
+- Python 3.12 o superior.
+- [`uv`](https://docs.astral.sh/uv/) para la gestión del entorno y dependencias.
 
 ### Pasos
 
 1. Clonar el repositorio:
   ```bash
-  git clone https://github.com/savendanobo-ui/microgravity_bacteria_sim.git
-  cd microgravity_bacteria_sim
+  git clone https://github.com/savendanobo-ui/bacteria_sim.git
+  cd bacteria_sim
   ```
 
-2. Crear y activar entorno virtual:
+2. Sincronizar entorno con uv:
   ```bash
-  python -m venv venv
-  source venv/bin/activate      # Linux/macOS
-  venv\Scripts\activate         # Windows
+  uv sync
   ```
 
-3. Instalar dependencias:
+3. Activar el entorno:
   ```bash
-  pip install -r requirements.txt
+  source .venv/bin/activate # En linux/MAC # .venv\Scripts\activate en Windows
   ```
 
 4. Uso:
   ```bash
-  python run.py --steps 300 --size 150 --microgravity --save-interval 50
+  python run.py 
   ```
 
 Puede alterar los diferentes argumentos, use 
@@ -59,7 +51,6 @@ Puede alterar los diferentes argumentos, use
   python run.py --help #para ver los argumentos disponibles
 
   #Argumentos disponibles
-  --microgravity	#Activa parámetros de microgravedad	
   --steps #STEPS	Número de pasos de simulación	
   --size #SIZE	Tamaño del grid (SIZE x SIZE)	
   --save #SAVE	Guardar último frame como PNG	
@@ -71,13 +62,8 @@ Puede alterar los diferentes argumentos, use
   ```
 
 Limitaciones conocidas:
-El sustrato se difunde aleatoriamente (sin gradientes de concenración ni quimiotaxis)
+El sustrato se difunde aleatoriamente (sin gradientes de concenración macroscópicos ni quimiotaxis)
+El modulo de calibración de parametros aun esta en desarrollo
 La visualización puede volverse lenta para grids de mas de 200x200
 
-Si utilizas este codigo, por favor referencia este repositorio
-https://github.com/savendanobo-ui/microgravity_bacteria_sim
-
 Distribuido bajo licencia MIT. Consulta el archivo LICENSE para mas información.
-
-Contacto:
-Samir Steven Avendaño Bolaños - savendanobo@unal.edu.co
