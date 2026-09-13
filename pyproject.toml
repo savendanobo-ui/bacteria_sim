@@ -14,10 +14,11 @@ dependencies = [
     "pandas>=2.0",
     "seaborn>=0.12",
     "scipy>=1.10",
+    "pytest>=8.2.1"
 ]
 
 [project.scripts]
-microgravity-bacteria-sim = "microgravity_bacteria_sim:main"
+bacteria_sim = "bacteria_sim:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]

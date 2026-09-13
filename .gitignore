@@ -22,6 +22,9 @@ data/*.npy
 data/*.csv
 runs/*.mp4
 runs/*.gif
+data/experimental/*.csv
+resultados_calibracion/
+tests/__pycache__
 
 # Archivos de pruebas
 .pytest_cache/

@@ -9,8 +9,8 @@ Este proyecto implementa un **autómata celular bidimensional** para simular el 
 
 ## Base científica
 
-- **Modelo estocástico basado en la literatura científica** → La probabilidad de crecimiento (`P_grow`) y probabilidad de división (`P_div`) controlan la fase de lag y de crecimiento; para controlar la fase estacionaria se usa la variable (`N0`) que representa la inhibición espacial.
-- **Sustrato y gradientes de concentración** → difusión browniana y consumo local por células en crecimiento. Gracias al consumo local de nutrientes de las bacterias se genera un gradiente de concentración natural.
+- **Modelo estocástico basado en la literatura científica:** La probabilidad de crecimiento (`P_grow`) y probabilidad de división (`P_div`) controlan la fase de lag y de crecimiento; para controlar la fase estacionaria se usa la variable (`N0`) que representa la inhibición espacial.
+- **Sustrato y gradientes de concentración:** difusión browniana y consumo local por células en crecimiento. Gracias al consumo local de nutrientes de las bacterias se genera un gradiente de concentración natural.
 - **Reglas celulares**:
   - `0` = vacío
   - `1` = célula en división
@@ -20,7 +20,7 @@ Este proyecto implementa un **autómata celular bidimensional** para simular el 
 ## Instalación
 
 ### Requisitos
-- Python 3.12 o superior.
+- Python 3.13 o superior.
 - [`uv`](https://docs.astral.sh/uv/) para la gestión del entorno y dependencias.
 
 ### Pasos
@@ -43,22 +43,16 @@ Este proyecto implementa un **autómata celular bidimensional** para simular el 
 
 4. Uso:
   ```bash
-  python run.py 
+  uv run python run.py # para correr una simulación
+  uv run python run_calibration.py # para realizar la calibración del modelo a partir de datos de /data/experimental, por ahora solo admite .csv
+  uv run python run_validation.py # para calcular metricas de validez del modelo usando un .csv de referencia de /data/experimental
   ```
 
 Puede alterar los diferentes argumentos, use 
   ```bash
-  python run.py --help #para ver los argumentos disponibles
-
-  #Argumentos disponibles
-  --steps #STEPS	Número de pasos de simulación	
-  --size #SIZE	Tamaño del grid (SIZE x SIZE)	
-  --save #SAVE	Guardar último frame como PNG	
-  --interval #INTERVAL	Milisegundos entre pasos de animación	
-  --no-metrics	#Oculta la gráfica de evolución	
-  --seed #SEED	Semilla para reproducibilidad	
-  --save-interval #N	Guardar imagen cada N pasos (0 = no guardar)	
-  --output-dir #DIR	Carpeta destino para imágenes guardadas	
+  uv run python run.py --help #para ver los argumentos disponibles
+	uv run python run_calibration.py --help 
+  uv run python run_validation.py --help
   ```
 
 Limitaciones conocidas:
