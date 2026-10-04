@@ -34,6 +34,7 @@ class BacteriaCellularAutomaton:
         N0: int = 3,
         P_grow: float = 0.25,
         P_div: float = 0.20,
+        verbose: bool = True,
     ):
         """
         Parámetros:
@@ -48,6 +49,7 @@ class BacteriaCellularAutomaton:
         self.N0 = N0
         self.P_grow = P_grow
         self.P_div = P_div
+        self.verbose = verbose
 
         # Inicializar matrices
         self.G = np.zeros((L, L), dtype=np.int8)  # Estados celulares
@@ -165,7 +167,7 @@ class BacteriaCellularAutomaton:
         self.G = new_G
         self.S = new_S
 
-        if divisions > 0 and self.time_step % 50 == 0:
+        if self.verbose and divisions > 0 and self.time_step % 50 == 0:
             print(f"Paso {self.time_step}: {divisions} nuevas células creadas")
 
     def step(self):
