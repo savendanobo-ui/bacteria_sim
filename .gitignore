@@ -30,6 +30,7 @@ tests/__pycache__
 .pytest_cache/
 .coverage
 htmlcov/
+fix_csv.py
 
 # Archivos temporales del sistema
 .DS_Store
