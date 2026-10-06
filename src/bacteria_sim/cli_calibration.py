@@ -15,11 +15,21 @@ app = cyclopts.App(
 )
 
 
+def _check_config(**kwargs) -> None:
+    """Valida parámetros con SimulationConfig y sale con un mensaje limpio."""
+    try:
+        SimulationConfig(**kwargs)
+    except ValueError as e:
+        raise SystemExit(f"Error: {e}")
+
+
 def _parse_range(s: str) -> list:
     """Parsea un rango tipo '0.05,0.5,0.05' a una lista."""
     parts = s.split(",")
     if len(parts) == 3:
         start, end, step = map(float, parts)
+        if step <= 0:
+            raise ValueError(f"El paso del rango debe ser > 0 (recibido: {step})")
         return np.arange(start, end + 1e-9, step).round(2).tolist()
     return [float(x) for x in parts]
 
@@ -50,9 +60,24 @@ def calibrate_cmd(
     """Ejecuta la calibración con barrido de parámetros en paralelo."""
     exp_time, exp_pop = load_experimental_data(Path(data))
 
-    N0_list = [int(x) for x in N0_values.split(",")]
-    P_grow_list = _parse_range(P_grow_range)
-    P_div_list = _parse_range(P_div_range)
+    try:
+        N0_list = [int(x) for x in N0_values.split(",")]
+        P_grow_list = _parse_range(P_grow_range)
+        P_div_list = _parse_range(P_div_range)
+    except ValueError as e:
+        raise SystemExit(f"Error en los rangos de parámetros: {e}")
+
+    # Validar todo antes de lanzar los procesos en paralelo
+    _check_config(L=L, steps=steps, init_cells=init_cells,
+                  init_substrate=init_substrate, seed=seed)
+    for n in N0_list:
+        _check_config(N0=n)
+    for p in P_grow_list:
+        _check_config(P_grow=p)
+    for p in P_div_list:
+        _check_config(P_div=p)
+    if n_jobs is not None and n_jobs < 1:
+        raise SystemExit(f"Error: n_jobs debe ser >= 1 (recibido: {n_jobs})")
 
     # --- Fase 1: Calibración ---
     print("=" * 60)
@@ -105,7 +130,7 @@ def calibrate_cmd(
         print(f"R²                = {metrics['R2']:.6f}")
         print(f"MAE               = {metrics['MAE']:.6f}")
 
-        diff = abs(best['MSE'] - metrics['MSE']) / best['MSE'] * 100
+        diff = abs(best['MSE'] - metrics['MSE']) / max(best['MSE'], 1e-12) * 100
         print(f"\nDiferencia MSE cal/val: {diff:.2f}%")
         if diff < 20:
             print("El modelo es reproducible (diferencia < 20%).")
@@ -128,6 +153,9 @@ def validate_cmd(
 ):
     """Valida el modelo con parámetros específicos."""
     exp_time, exp_pop = load_experimental_data(Path(data))
+    _check_config(L=L, steps=steps, init_cells=init_cells,
+                  init_substrate=init_substrate, N0=N0,
+                  P_grow=P_grow, P_div=P_div, seed=seed)
     config = SimulationConfig(
         L=L, steps=steps,
         init_cells=init_cells,

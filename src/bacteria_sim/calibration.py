@@ -1,8 +1,7 @@
 """
 Módulo de calibración y validación del autómata celular.
 
-Este módulo contiene la lógica de calibración y validación, pero NO
-se encarga de parsear argumentos (eso lo hace cli_calibration.py).
+Este módulo contiene la lógica de calibración y validación.
 """
 
 import json
@@ -149,6 +148,10 @@ def calibrate(
 
     if n_jobs is None:
         n_jobs = cpu_count()
+    if n_jobs < 1:
+        raise ValueError(f"n_jobs debe ser >= 1 (recibido: {n_jobs})")
+    # Más procesos que núcleos no acelera una tarea limitada por CPU.
+    n_jobs = min(n_jobs, cpu_count())
 
     # Crear el config_template ANTES del Pool
     config_template = SimulationConfig(
@@ -214,7 +217,7 @@ def calibrate(
 
     if verbose:
         best = df.iloc[0]
-        print(f"\nMejor combinación: N0={best['N0']}, "
+        print(f"\nMejor combinación: N0={int(best['N0'])}, "
               f"P_grow={best['P_grow']}, P_div={best['P_div']}, "
               f"MSE={best['MSE']:.6f}")
 
@@ -339,7 +342,7 @@ def _save_top_and_worst(
         top_dir = output_dir / f"top_{save_top_n}"
         top_dir.mkdir(parents=True, exist_ok=True)
         for rank, (_, row) in enumerate(df.head(save_top_n).iterrows(), start=1):
-            sim_dir = top_dir / f"rank_{rank:02d}_N0-{row['N0']}_Pg-{row['P_grow']}_Pd-{row['P_div']}"
+            sim_dir = top_dir / f"rank_{rank:02d}_N0-{int(row['N0'])}_Pg-{row['P_grow']}_Pd-{row['P_div']}"
             sim_dir.mkdir(exist_ok=True)
 
             config = SimulationConfig(
@@ -372,7 +375,7 @@ def _save_top_and_worst(
         worst_dir = output_dir / f"worst_{save_worst_n}"
         worst_dir.mkdir(parents=True, exist_ok=True)
         for rank, (_, row) in enumerate(df.tail(save_worst_n).iterrows(), start=1):
-            sim_dir = worst_dir / f"rank_{rank:02d}_N0-{row['N0']}_Pg-{row['P_grow']}_Pd-{row['P_div']}"
+            sim_dir = worst_dir / f"rank_{rank:02d}_N0-{int(row['N0'])}_Pg-{row['P_grow']}_Pd-{row['P_div']}"
             sim_dir.mkdir(exist_ok=True)
 
             config = SimulationConfig(

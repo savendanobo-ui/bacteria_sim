@@ -85,7 +85,9 @@ class BacteriaVisualization:
             for step in range(steps):
                 self.model.step()
                 self._update_display(step, steps)
-                plt.pause(self.update_interval / 1000.0)
+                # plt.pause(0) se queda esperando para siempre en backends sin
+                # ventana (p. ej. Agg), así que se usa un mínimo de 1 ms.
+                plt.pause(max(self.update_interval / 1000.0, 0.001))
                 
                 # Guardar cada save_interval pasos
                 if self.save_interval and self.save_interval > 0 and (step + 1) % self.save_interval == 0:
@@ -101,8 +103,6 @@ class BacteriaVisualization:
             plt.show(block=True)
         except KeyboardInterrupt:
             print("\nSimulación interrumpida.")
-        except Exception as e:
-            print(f"Error: {e}")
         finally:
             plt.close(self.fig)
     

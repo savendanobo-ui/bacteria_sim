@@ -36,20 +36,23 @@ def simulate(
     update_interval: int = 50,
 ):
     """Ejecuta una simulación individual del autómata celular."""
-    config = SimulationConfig(
-        L=L,
-        steps=steps,
-        seed=seed,
-        init_cells=init_cells,
-        init_substrate=init_substrate,
-        N0=N0,
-        P_grow=P_grow,
-        P_div=P_div,
-        save_interval=save_interval,
-        output_dir=output_dir,
-        show_metrics=show_metrics,
-        update_interval=update_interval,
-    )
+    try:
+        config = SimulationConfig(
+            L=L,
+            steps=steps,
+            seed=seed,
+            init_cells=init_cells,
+            init_substrate=init_substrate,
+            N0=N0,
+            P_grow=P_grow,
+            P_div=P_div,
+            save_interval=save_interval,
+            output_dir=output_dir,
+            show_metrics=show_metrics,
+            update_interval=update_interval,
+        )
+    except ValueError as e:
+        raise SystemExit(f"Error: {e}")
     run_simulation(config)
 
 

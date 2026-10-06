@@ -36,7 +36,7 @@ def run_simulation(config: SimulationConfig) -> BacteriaCellularAutomaton:
     save_interval = None
     if config.save_interval > 0:
         output_dir = Path(config.output_dir)
-        output_dir.mkdir(exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
         save_interval = config.save_interval
         print(f"Guardando imágenes cada {save_interval} pasos en '{output_dir}/'")
     else:

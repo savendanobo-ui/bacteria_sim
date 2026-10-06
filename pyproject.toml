@@ -7,20 +7,24 @@ authors = [
     { name = "savendanobo-ui", email = "savendanobo@unal.edu.co" }
 ]
 license = {text = "MIT"}
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "numpy>=1.24",
     "matplotlib>=3.7",
     "pandas>=2.0",
     "seaborn>=0.12",
     "scipy>=1.10",
-    "pytest>=8.2.1",
     "cyclopts>=5.0.0",
     "tqdm>=4.70.1",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.2.1",
+]
+
 [project.scripts]
-bacteria_sim = "bacteria_sim:main"
+bacteria_sim = "bacteria_sim.cli:app"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]

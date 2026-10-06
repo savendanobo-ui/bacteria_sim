@@ -31,6 +31,7 @@ tests/__pycache__
 .coverage
 htmlcov/
 fix_csv.py
+resultados_calibracion.csv
 
 # Archivos temporales del sistema
 .DS_Store
