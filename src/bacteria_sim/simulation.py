@@ -50,6 +50,8 @@ def run_simulation(config: SimulationConfig) -> BacteriaCellularAutomaton:
         N0=config.N0,
         P_grow=config.P_grow,
         P_div=config.P_div,
+        P_maint=config.P_maint,
+        starve_threshold=config.starve_threshold,
     )
 
     # Crear visualización

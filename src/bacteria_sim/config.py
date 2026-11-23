@@ -28,6 +28,8 @@ class SimulationConfig:
     N0: int = 3
     P_grow: float = 0.25
     P_div: float = 0.20
+    P_maint: float = 0.0
+    starve_threshold: int = 3  # Pasos consecutivos sin sustrato para entrar en fase estacionaria (G=3)
 
     # Parámetros de visualización / guardado
     save_interval: int = 0

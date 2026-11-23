@@ -15,23 +15,30 @@ app = cyclopts.App(
 )
 
 
-def _check_config(**kwargs) -> None:
-    """Valida parámetros con SimulationConfig y sale con un mensaje limpio."""
-    try:
-        SimulationConfig(**kwargs)
-    except ValueError as e:
-        raise SystemExit(f"Error: {e}")
-
-
 def _parse_range(s: str) -> list:
     """Parsea un rango tipo '0.05,0.5,0.05' a una lista."""
     parts = s.split(",")
     if len(parts) == 3:
         start, end, step = map(float, parts)
-        if step <= 0:
-            raise ValueError(f"El paso del rango debe ser > 0 (recibido: {step})")
         return np.arange(start, end + 1e-9, step).round(2).tolist()
     return [float(x) for x in parts]
+
+
+def _parse_int_range(s: str) -> list:
+    """Parsea un rango de enteros tipo '1,5,1', '1:5', '2,4,7' o '3' a una lista."""
+    s = s.strip()
+    if ":" in s:
+        parts = [int(x.strip()) for x in s.split(":")]
+        if len(parts) == 2:
+            return list(range(parts[0], parts[1] + 1))
+        elif len(parts) == 3:
+            return list(range(parts[0], parts[1] + 1, parts[2]))
+    parts = [int(x.strip()) for x in s.split(",")]
+    if len(parts) == 3:
+        start, end, step = parts
+        if step > 0 and start <= end and (end - start) >= step:
+            return list(range(start, end + 1, step))
+    return parts
 
 
 @app.command()
@@ -43,41 +50,39 @@ def calibrate_cmd(
     # Parámetros de simulación
     L: int = 100,
     steps: int = 480,
-    init_cells: float = 0.005,
-    init_substrate: float = 0.5,
+    init_cells: Optional[float] = None,
     seed: int = 42,
     # Rangos de parámetros
     N0_values: str = "2,3,4,5,6",
     P_grow_range: str = "0.05,0.50,0.05",
     P_div_range: str = "0.05,0.50,0.05",
+    init_substrate_range: str = "0.02,0.10,0.02",
+    P_maint_range: str = "0.0",
+    starve_threshold_range: str = "3",
     # Guardado de figuras
     save_top: int = 10,
     save_worst: int = 5,
     snapshot_interval: int = 50,
+    plot_substrate: bool = True,
     # Validación automática
     auto_validate: bool = False,
 ):
     """Ejecuta la calibración con barrido de parámetros en paralelo."""
     exp_time, exp_pop = load_experimental_data(Path(data))
 
-    try:
-        N0_list = [int(x) for x in N0_values.split(",")]
-        P_grow_list = _parse_range(P_grow_range)
-        P_div_list = _parse_range(P_div_range)
-    except ValueError as e:
-        raise SystemExit(f"Error en los rangos de parámetros: {e}")
+    # Cálculo automático de init_cells a partir de la capacidad y multiplicación experimental
+    if init_cells is None or init_cells <= 0:
+        k_fold = float(np.max(exp_pop) / (exp_pop[0] + 1e-6))
+        target_plateau_density = 0.036
+        init_cells = round(target_plateau_density / max(k_fold, 1.0), 4)
+        print(f"init_cells auto-calculado: {init_cells} (K={k_fold:.2f}, objetivo={target_plateau_density})")
 
-    # Validar todo antes de lanzar los procesos en paralelo
-    _check_config(L=L, steps=steps, init_cells=init_cells,
-                  init_substrate=init_substrate, seed=seed)
-    for n in N0_list:
-        _check_config(N0=n)
-    for p in P_grow_list:
-        _check_config(P_grow=p)
-    for p in P_div_list:
-        _check_config(P_div=p)
-    if n_jobs is not None and n_jobs < 1:
-        raise SystemExit(f"Error: n_jobs debe ser >= 1 (recibido: {n_jobs})")
+    N0_list = [int(x) for x in N0_values.split(",")]
+    P_grow_list = _parse_range(P_grow_range)
+    P_div_list = _parse_range(P_div_range)
+    init_substrate_list = _parse_range(init_substrate_range)
+    P_maint_list = _parse_range(P_maint_range)
+    starve_threshold_list = _parse_int_range(starve_threshold_range)
 
     # --- Fase 1: Calibración ---
     print("=" * 60)
@@ -88,10 +93,12 @@ def calibrate_cmd(
         N0_values=N0_list,
         P_grow_values=P_grow_list,
         P_div_values=P_div_list,
+        init_substrate_values=init_substrate_list,
+        P_maint_values=P_maint_list,
+        starve_threshold_values=starve_threshold_list,
         L=L,
         steps=steps,
         init_cells=init_cells,
-        init_substrate=init_substrate,
         seed=seed,
         n_jobs=n_jobs,
         output_csv=Path(output),
@@ -99,6 +106,7 @@ def calibrate_cmd(
         save_top_n=save_top,
         save_worst_n=save_worst,
         snapshot_interval=snapshot_interval,
+        plot_substrate=plot_substrate,
     )
 
     # --- Fase 2: Validación automática ---
@@ -110,15 +118,20 @@ def calibrate_cmd(
         print(f"Usando los mejores parámetros: "
               f"N0={int(best['N0'])}, "
               f"P_grow={best['P_grow']}, "
-              f"P_div={best['P_div']}")
+              f"P_div={best['P_div']}, "
+              f"init_substrate={best['init_substrate']}, "
+              f"P_maint={best['P_maint']}, "
+              f"starve_threshold={int(best['starve_threshold'])}")
 
         config = SimulationConfig(
             L=L, steps=steps,
             init_cells=init_cells,
-            init_substrate=init_substrate,
+            init_substrate=float(best["init_substrate"]),
             N0=int(best["N0"]),
             P_grow=best["P_grow"],
             P_div=best["P_div"],
+            P_maint=float(best["P_maint"]),
+            starve_threshold=int(best["starve_threshold"]),
             seed=seed,
         )
 
@@ -130,7 +143,7 @@ def calibrate_cmd(
         print(f"R²                = {metrics['R2']:.6f}")
         print(f"MAE               = {metrics['MAE']:.6f}")
 
-        diff = abs(best['MSE'] - metrics['MSE']) / max(best['MSE'], 1e-12) * 100
+        diff = abs(best['MSE'] - metrics['MSE']) / best['MSE'] * 100
         print(f"\nDiferencia MSE cal/val: {diff:.2f}%")
         if diff < 20:
             print("El modelo es reproducible (diferencia < 20%).")
@@ -144,28 +157,36 @@ def validate_cmd(
     N0: int,
     P_grow: float,
     P_div: float,
+    P_maint: float = 0.0,
+    starve_threshold: int = 3,
     L: int = 100,
     steps: int = 480,
-    init_cells: float = 0.005,
+    init_cells: Optional[float] = None,
     init_substrate: float = 1.0,
     seed: int = 42,
     show_progress: bool = True,
 ):
     """Valida el modelo con parámetros específicos."""
     exp_time, exp_pop = load_experimental_data(Path(data))
-    _check_config(L=L, steps=steps, init_cells=init_cells,
-                  init_substrate=init_substrate, N0=N0,
-                  P_grow=P_grow, P_div=P_div, seed=seed)
+
+    if init_cells is None or init_cells <= 0:
+        k_fold = float(np.max(exp_pop) / (exp_pop[0] + 1e-6))
+        target_plateau_density = 0.036
+        init_cells = round(target_plateau_density / max(k_fold, 1.0), 4)
+        print(f"init_cells auto-calculado: {init_cells} (K={k_fold:.2f}, objetivo={target_plateau_density})")
+
     config = SimulationConfig(
         L=L, steps=steps,
         init_cells=init_cells,
         init_substrate=init_substrate,
         N0=N0, P_grow=P_grow, P_div=P_div,
+        P_maint=P_maint,
+        starve_threshold=starve_threshold,
         seed=seed,
     )
     metrics = validate(config, (exp_time, exp_pop), show_progress=show_progress,)
     print(f"\n--- Resultados de validación ---")
-    print(f"N0 = {N0}, P_grow = {P_grow}, P_div = {P_div}")
+    print(f"N0 = {N0}, P_grow = {P_grow}, P_div = {P_div}, P_maint = {P_maint}")
     print(f"L = {L}, steps = {steps}")
     print(f"init_cells = {init_cells}, init_substrate = {init_substrate}")
     print(f"MSE = {metrics['MSE']:.6f}")

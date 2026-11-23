@@ -22,14 +22,14 @@ class BacteriaVisualization:
             self.fig, (self.ax_cells, self.ax_substrate) = plt.subplots(1, 2, figsize=(10, 5))
             self.ax_metrics = None
         
-        self.cmap_cells = ListedColormap(['white', 'blue', 'red'])
-        self.bounds_cells = [0, 1, 2, 3]
+        self.cmap_cells = ListedColormap(['white', 'blue', 'red', 'forestgreen'])
+        self.bounds_cells = [0, 1, 2, 3, 4]
         self.norm_cells = BoundaryNorm(self.bounds_cells, self.cmap_cells.N)
         
         self.im_cells = self.ax_cells.imshow(self.model.G, cmap=self.cmap_cells, norm=self.norm_cells, interpolation='nearest')
         self.im_substrate = self.ax_substrate.imshow(self.model.S, cmap='gray', interpolation='nearest', vmin=0, vmax=1)
         
-        self.ax_cells.set_title("Estados celulares\nBlanco: vacío | Azul: división | Rojo: crecimiento")
+        self.ax_cells.set_title("Estados celulares\nBlanco: vacío | Azul: división | Rojo: crecimiento | Verde: estacionaria")
         self.ax_substrate.set_title("Sustrato (blanco = disponible)")
         
         if self.ax_metrics:

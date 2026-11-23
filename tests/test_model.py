@@ -8,7 +8,12 @@ Ejecutar con:
 import numpy as np
 import pytest
 from bacteria_sim.model import BacteriaCellularAutomaton
-from bacteria_sim.calibration import normalize_curve, compute_mse
+from bacteria_sim.calibration import (
+    normalize_curve, compute_mse, calibrate,
+    _run_simulation_no_viz, _save_growth_and_substrate_curve,
+)
+from bacteria_sim.config import SimulationConfig
+from bacteria_sim.cli_calibration import _parse_int_range
 
 
 # ============================================================
@@ -52,10 +57,10 @@ class TestModelInitialization:
         assert model.time_step == 0
 
     def test_states_are_valid(self):
-        """Todos los estados deben ser 0, 1 o 2."""
+        """Todos los estados deben ser 0, 1, 2 o 3."""
         model = BacteriaCellularAutomaton(L=20, init_cells=0.1)
         unique = np.unique(model.G)
-        assert set(unique).issubset({0, 1, 2})
+        assert set(unique).issubset({0, 1, 2, 3})
 
     def test_substrate_is_binary(self):
         """El sustrato debe ser binario (0 o 1)."""
@@ -184,6 +189,117 @@ class TestGrowthRules:
         model.P_grow = 1.0
         model.update_cells()
         assert model.G[5, 5] == 2
+
+
+# ============================================================
+# 4b. Reglas de mantenimiento celular (Opción A)
+# ============================================================
+
+class TestMaintenanceRules:
+    """Pruebas del consumo de mantenimiento basal."""
+
+    def test_maintenance_disabled_by_default(self):
+        """Con P_maint = 0.0, una célula sin sustrato no consume de vecinos."""
+        model = BacteriaCellularAutomaton(L=10, init_cells=0.0, init_substrate=0.0, P_maint=0.0)
+        model.G[5, 5] = 2
+        model.S[5, 6] = 1  # Sustrato en vecino
+        model.update_cells()
+        # El sustrato vecino sigue intacto
+        assert model.S[5, 6] == 1
+
+    def test_maintenance_consumes_local_substrate(self):
+        """Con P_maint = 1.0, consume sustrato local por mantenimiento aun con P_grow = 0."""
+        model = BacteriaCellularAutomaton(L=10, init_cells=0.0, init_substrate=0.0, P_maint=1.0, P_grow=0.0)
+        model.G[5, 5] = 2
+        model.S[5, 5] = 1
+        model.update_cells()
+        # El sustrato local debe ser consumido
+        assert model.S[5, 5] == 0
+        # No debe haber pasado a división porque P_grow = 0
+        assert model.G[5, 5] == 2
+
+    def test_maintenance_consumes_neighbor_substrate(self):
+        """Con P_maint = 1.0, una célula sin sustrato propio consume de un vecino."""
+        model = BacteriaCellularAutomaton(L=10, init_cells=0.0, init_substrate=0.0, P_maint=1.0)
+        model.G[5, 5] = 2
+        model.S[5, 5] = 0  # Sin sustrato propio
+        model.S[5, 6] = 1  # Sustrato en vecino
+        model.update_cells()
+        # Debe haber consumido el sustrato del vecino
+        assert model.S[5, 6] == 0
+
+    def test_maintenance_preserves_cell_count(self):
+        """El mantenimiento no genera nuevas células por sí solo."""
+        model = BacteriaCellularAutomaton(L=10, init_cells=0.0, init_substrate=0.0, P_maint=1.0, P_grow=0.0)
+        model.G[5, 5] = 2
+        model.S[5, 5] = 1
+        model.update_cells()
+        assert model.get_cell_count() == 1
+
+
+# ============================================================
+# 4.2 Reglas de fase estacionaria (inanición G=3)
+# ============================================================
+
+class TestStationaryPhaseRules:
+    """Pruebas de la transición a fase estacionaria por inanición (G=3)."""
+
+    def test_starvation_transition_to_stationary(self):
+        """Una célula sin sustrato por starve_threshold pasos pasa a G=3."""
+        model = BacteriaCellularAutomaton(L=10, init_cells=0.0, init_substrate=0.0, starve_threshold=3)
+        model.G[5, 5] = 2
+        model.S[5, 5] = 0  # Sin sustrato
+
+        # Paso 1
+        model.update_cells()
+        assert model.G[5, 5] == 2
+        assert model.starve_time[5, 5] == 1
+
+        # Paso 2
+        model.update_cells()
+        assert model.G[5, 5] == 2
+        assert model.starve_time[5, 5] == 2
+
+        # Paso 3: alcanza el umbral -> pasa a G=3
+        model.update_cells()
+        assert model.G[5, 5] == 3
+
+    def test_fed_cell_resets_starvation(self):
+        """Si una célula recibe sustrato antes del umbral, resetea el contador."""
+        model = BacteriaCellularAutomaton(L=10, init_cells=0.0, init_substrate=0.0, starve_threshold=3, P_grow=0.0)
+        model.G[5, 5] = 2
+        model.S[5, 5] = 0
+
+        # Paso 1: sin sustrato
+        model.update_cells()
+        assert model.starve_time[5, 5] == 1
+
+        # Paso 2: llega sustrato
+        model.S[5, 5] = 1
+        model.update_cells()
+        assert model.G[5, 5] == 2
+        assert model.starve_time[5, 5] == 0
+
+    def test_stationary_cells_do_not_divide(self):
+        """Células en G=3 permanecen en G=3 y no intentan dividirse."""
+        model = BacteriaCellularAutomaton(L=10, init_cells=0.0, init_substrate=0.0)
+        model.G[5, 5] = 3
+        model.S[5, 5] = 1  # Hay sustrato, pero la célula está en fase estacionaria
+        model.update_cells()
+        assert model.G[5, 5] == 3
+        assert model.get_cell_count() == 1
+
+    def test_stationary_cells_inhibit_neighbors(self):
+        """Células en G=3 cuentan como vecinas ocupadas para inhibición por contacto."""
+        model = BacteriaCellularAutomaton(L=10, init_cells=0.0, init_substrate=0.0)
+        model.G[5, 5] = 1
+        # Rodear de células en G=3
+        for di in [-1, 0, 1]:
+            for dj in [-1, 0, 1]:
+                if di == 0 and dj == 0:
+                    continue
+                model.G[5 + di, 5 + dj] = 3
+        assert model.count_neighbor_cells(5, 5) == 8
 
 
 # ============================================================
@@ -322,7 +438,16 @@ class TestAuxiliaryMethods:
         model.G[1, 1] = 1
         model.G[2, 2] = 2
         model.G[3, 3] = 2
-        assert model.get_cell_count() == 3
+        model.G[4, 4] = 3
+        assert model.get_cell_count() == 4
+
+    def test_get_stationary_cells(self):
+        """El conteo de células estacionarias debe ser correcto."""
+        model = BacteriaCellularAutomaton(L=10, init_cells=0.0, init_substrate=0.0)
+        model.G[1, 1] = 3
+        model.G[2, 2] = 3
+        model.G[3, 3] = 2
+        assert model.get_stationary_cells() == 2
 
     def test_get_growing_cells(self):
         """El conteo de células en crecimiento debe ser correcto."""
@@ -389,6 +514,86 @@ class TestCalibrationUtilities:
         mse_21 = compute_mse(curve2, curve1)
         assert mse_12 > 0
         assert mse_21 > 0
+
+    def test_parse_int_range_single_value(self):
+        """Un único valor se parsea a una lista con un entero."""
+        assert _parse_int_range("3") == [3]
+
+    def test_parse_int_range_triplet(self):
+        """Un formato '1,5,1' genera una secuencia inclusiva de enteros."""
+        assert _parse_int_range("1,5,1") == [1, 2, 3, 4, 5]
+        assert _parse_int_range("2,6,2") == [2, 4, 6]
+
+    def test_parse_int_range_list(self):
+        """Valores separados por coma se convierten en lista de enteros."""
+        assert _parse_int_range("2,4,7") == [2, 4, 7]
+
+    def test_calibrate_sweeps_starve_threshold(self):
+        """calibrate() debe barrer starve_threshold_values y contener la columna en el DataFrame."""
+        exp_time = np.array([0, 1, 2, 3])
+        exp_pop = np.array([10, 20, 30, 40])
+        df = calibrate(
+            experimental_data=(exp_time, exp_pop),
+            N0_values=[3],
+            P_grow_values=[0.5],
+            P_div_values=[0.5],
+            init_substrate_values=[0.1],
+            P_maint_values=[0.0],
+            starve_threshold_values=[2, 4],
+            steps=5,
+            L=20,
+            n_jobs=1,
+            verbose=False,
+        )
+        assert len(df) == 2
+        assert "starve_threshold" in df.columns
+        assert set(df["starve_threshold"].tolist()) == {2, 4}
+
+    def test_calibrate_auto_computes_init_cells(self):
+        """calibrate() sin init_cells debe calcularlo automáticamente según la multiplicación experimental."""
+        exp_time = np.array([1, 2, 3])
+        exp_pop = np.array([0.1, 0.3, 0.72])  # K = 7.2 -> init_cells ~ 0.005
+        df = calibrate(
+            experimental_data=(exp_time, exp_pop),
+            N0_values=[3],
+            P_grow_values=[0.5],
+            P_div_values=[0.5],
+            init_substrate_values=[0.1],
+            P_maint_values=[0.0],
+            starve_threshold_values=[3],
+            init_cells=None,
+            steps=5,
+            L=20,
+            n_jobs=1,
+            verbose=False,
+        )
+        assert len(df) == 1
+
+    def test_run_simulation_no_viz_returns_substrate(self):
+        """_run_simulation_no_viz con return_substrate=True debe devolver tupla (pop, sub)."""
+        config = SimulationConfig(L=10, steps=5, init_cells=0.1, init_substrate=0.5)
+        res = _run_simulation_no_viz(config, return_substrate=True)
+        assert isinstance(res, tuple) and len(res) == 2
+        pop, sub = res
+        assert len(pop) == 6
+        assert len(sub) == 6
+
+    def test_save_growth_and_substrate_curve(self, tmp_path):
+        """_save_growth_and_substrate_curve debe generar una imagen con doble eje."""
+        sim_curve = np.array([10.0, 20.0, 40.0])
+        sub_curve = np.array([50.0, 40.0, 25.0])
+        exp_curve = np.array([10.0, 22.0, 38.0])
+        out_file = tmp_path / "test_sustrato.png"
+        _save_growth_and_substrate_curve(
+            sim_curve, sub_curve, exp_curve,
+            N0=3, P_grow=0.5, P_div=0.5, MSE=0.01,
+            output_path=out_file,
+            time_sim=np.array([0, 20, 40]),
+            time_exp=np.array([20, 40]),
+            raw_exp_pop=np.array([22.0, 38.0]),
+        )
+        assert out_file.exists()
+        assert out_file.stat().st_size > 0
 
 
 # ============================================================
