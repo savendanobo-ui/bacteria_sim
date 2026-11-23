@@ -9,13 +9,15 @@ Este proyecto implementa un **autómata celular bidimensional** para simular el 
 
 ## Base científica
 
-- **Modelo estocástico basado en la literatura científica:** La probabilidad de crecimiento (`P_grow`) y probabilidad de división (`P_div`) controlan la fase de lag y de crecimiento; para controlar la fase estacionaria se usa la variable (`N0`) que representa la inhibición espacial.
+- **Modelo estocástico basado en la literatura científica:** La probabilidad de crecimiento (`P_grow`), la probabilidad de división (`P_div`) y (`P_maint`) controlan la fase de lag y de crecimiento; para controlar la fase estacionaria se usa la variable (`N0`) que representa la inhibición espacial y la variable (`starve_threshold`) que dispara el arresto replicativo irreversible de la célula hacia el estado quiescente.
 - **Sustrato y gradientes de concentración:** difusión browniana y consumo local por células en crecimiento. Gracias al consumo local de nutrientes de las bacterias se genera un gradiente de concentración natural.
 - **Reglas celulares**:
   - `0` = vacío
-  - `1` = célula en división
-  - `2` = célula en crecimiento
+  - `1` = célula en crecimiento
+  - `2` = célula en división
+  - `3` = célula en fase estacionaria
 - **Inhibición espacial**: una célula en división pasa a crecimiento si el número de vecinos supera el umbral `N0`.
+- **Contador de inanición**: Variable interna caracteristico de cada bacteria que guarda la cantidad de pasos en los que no consume sustrato.
 
 ## Instalación
 
@@ -57,8 +59,6 @@ Puede alterar los diferentes argumentos, use
 Limitaciones conocidas:
 - El sustrato se difunde aleatoriamente (sin gradientes de concenración macroscópicos ni quimiotaxis).
 - La visualización puede volverse lenta para grids de mas de 200x200.
-- Faltan metodos para cuantificar la varianza de las métricas de ajuste en función de la semilla usada.
-- Falta un mapa de calor para saber la sensibilidad de la simulación a los parámetros. 
-- Falta estructurar los resultados de las simulaciones de manera más óptima.
+- Fase de construcción del modelo analitico predictivo pendiente.
 
 Distribuido bajo licencia MIT. Consulta el archivo LICENSE para mas información.
